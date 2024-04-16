@@ -9,6 +9,7 @@ import 'package:inbank_frontend/widgets/national_id_field.dart';
 
 import '../api_service.dart';
 import '../colors.dart';
+import '../consts.dart';
 
 // LoanForm is a StatefulWidget that displays a loan application form.
 class LoanForm extends StatefulWidget {
@@ -31,6 +32,15 @@ class _LoanFormState extends State<LoanForm> {
   // Submit the form and update the state with the loan decision results.
   // Only submits if the form inputs are validated.
   void _submitForm() async {
+    if (!_isValidAge(_nationalId)) {
+      setState(() {
+        _errorMessage = "You are not within the valid age range.";
+        _loanAmountResult = 0;
+        _loanPeriodResult = 0;
+      });
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       final result = await _apiService.requestLoanDecision(
           _nationalId, _loanAmount, _loanPeriod);
@@ -52,6 +62,32 @@ class _LoanFormState extends State<LoanForm> {
       _loanPeriodResult = 0;
     }
   }
+
+  bool _isValidAge(String personalCode) {
+    if (personalCode.length != 11) {
+      throw ArgumentError("Personal ID code must be 11 characters long!");
+    }
+
+    int year = int.parse(personalCode.substring(1, 3));
+    year = (year < 24) ? year + 2000 : year + 1900;
+    int month = int.parse(personalCode.substring(3, 5));
+    int day = int.parse(personalCode.substring(5, 7));
+
+    DateTime currentDate = DateTime.now();
+
+    int age = currentDate.year - year;
+    if (month > currentDate.month || (month == currentDate.month && day > currentDate.day)) {
+      age--;
+    }
+
+    bool isMale = int.parse(personalCode.substring(0, 1)) % 2 == 1;
+
+    double maxAge = isMale ? ConstValues.MAXIMUM_AGE_MALE - (ConstValues.MAXIMUM_LOAN_PERIOD / 12)
+        : ConstValues.MAXIMUM_AGE_FEMALE - (ConstValues.MAXIMUM_LOAN_PERIOD / 12);
+    return age >= ConstValues.MINIMUM_AGE && age <= maxAge;
+  }
+
+
 
   // Builds the application form widget.
   // The widget automatically queries the endpoint for the latest data
