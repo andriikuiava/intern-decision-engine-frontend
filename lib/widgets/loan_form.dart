@@ -1,6 +1,3 @@
-// This file defines a `LoanForm` widget which is a stateful widget
-// that displays a loan application form.
-
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -10,7 +7,6 @@ import 'package:inbank_frontend/widgets/national_id_field.dart';
 import '../api_service.dart';
 import '../colors.dart';
 
-// LoanForm is a StatefulWidget that displays a loan application form.
 class LoanForm extends StatefulWidget {
   const LoanForm({Key? key}) : super(key: key);
 
@@ -27,20 +23,19 @@ class _LoanFormState extends State<LoanForm> {
   int _loanAmountResult = 0;
   int _loanPeriodResult = 0;
   String _errorMessage = '';
+  String _country = 'Estonia'; // Default country
 
-  // Submit the form and update the state with the loan decision results.
-  // Only submits if the form inputs are validated.
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
       final result = await _apiService.requestLoanDecision(
-          _nationalId, _loanAmount, _loanPeriod);
+          _nationalId, _loanAmount, _loanPeriod, _country);
       setState(() {
         int tempAmount = int.parse(result['loanAmount'].toString());
         int tempPeriod = int.parse(result['loanPeriod'].toString());
 
         if (tempAmount <= _loanAmount || tempPeriod > _loanPeriod) {
-          _loanAmountResult = int.parse(result['loanAmount'].toString());
-          _loanPeriodResult = int.parse(result['loanPeriod'].toString());
+          _loanAmountResult = tempAmount;
+          _loanPeriodResult = tempPeriod;
         } else {
           _loanAmountResult = _loanAmount;
           _loanPeriodResult = _loanPeriod;
@@ -53,9 +48,6 @@ class _LoanFormState extends State<LoanForm> {
     }
   }
 
-  // Builds the application form widget.
-  // The widget automatically queries the endpoint for the latest data
-  // when a field is changed.
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -71,26 +63,37 @@ class _LoanFormState extends State<LoanForm> {
               key: _formKey,
               child: Column(
                 children: [
-                  FormField<String>(
-                    builder: (state) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          NationalIdTextFormField(
-                            onChanged: (value) {
-                              setState(() {
-                                _nationalId = value ?? '';
-                                _submitForm();
-                              });
-                            },
-                          ),
-                        ],
-                      );
+                  NationalIdTextFormField(
+                    onChanged: (value) {
+                      setState(() {
+                        _nationalId = value ?? '';
+                        _submitForm();
+                      });
                     },
                   ),
-                  const SizedBox(height: 60.0),
+                  const SizedBox(height: 24.0),
+                  DropdownButtonFormField<String>(
+                    value: _country,
+                    decoration: const InputDecoration(
+                      labelText: 'Select Country',
+                      labelStyle: TextStyle(color: AppColors.primaryColor),
+                    ),
+                    dropdownColor: AppColors.primaryColor,
+                    items: ['Estonia', 'Latvia', 'Lithuania']
+                        .map((country) => DropdownMenuItem(
+                      value: country,
+                      child: Text(country, style: TextStyle(color: Colors.white)),
+                    ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _country = value!;
+                        _submitForm();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24.0),
                   Text('Loan Amount: $_loanAmount €'),
-                  const SizedBox(height: 8),
                   Slider.adaptive(
                     value: _loanAmount.toDouble(),
                     min: 2000,
@@ -105,31 +108,8 @@ class _LoanFormState extends State<LoanForm> {
                       });
                     },
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: const [
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(left: 12),
-                          child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text('2000€')),
-                        ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(right: 12),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Text('10000€'),
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
                   const SizedBox(height: 24.0),
                   Text('Loan Period: $_loanPeriod months'),
-                  const SizedBox(height: 8),
                   Slider.adaptive(
                     value: _loanPeriod.toDouble(),
                     min: 12,
@@ -144,29 +124,6 @@ class _LoanFormState extends State<LoanForm> {
                       });
                     },
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: const [
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(left: 12),
-                          child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text('6 months')),
-                        ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(right: 12),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Text('48 months'),
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 24.0),
                 ],
               ),
             ),
